@@ -29,6 +29,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.material3.Button
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import kotlinx.serialization.Serializable
+import androidx.navigation.toRoute
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +58,7 @@ data class Message(val author: String, val body: String)
 
 @Composable
 fun MessageCard(msg: Message) {
+
     Row {
         Image(
             painter = painterResource(R.drawable.small_naama),
@@ -117,12 +124,59 @@ fun PreviewMessageCard() {
     }
 }
 
+@Serializable
+object FaceConversation
+@Serializable
+object LostScreen
+
 @Composable
-fun Conversation(messages: List<Message>) {
+fun NavigationBegin(messages: List<Message>) {
+
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = FaceConversation
+    ) {
+        composable<FaceConversation> {
+
+            Conversation(
+                messages = messages,
+                onNavigateToSomewhere = {
+                    navController.navigate(route = LostScreen)
+                }
+            )
+
+        }
+        composable<LostScreen> {
+            OtherScreen(
+                onNavigateBack = {
+                    navController.navigate(route = FaceConversation) {
+                        popUpTo(FaceConversation) {
+                            inclusive = true
+                        }
+                    }
+                }
+            )
+        }
+    }
+
+}
+
+
+
+@Composable
+fun Conversation(messages: List<Message>, onNavigateToSomewhere: () -> Unit,) {
 
     Column() {
 
-        FaceLand()
+        Row() {
+            FaceLand()
+            Spacer(modifier = Modifier.width(90.dp))
+            Button(onClick = {onNavigateToSomewhere()}) {
+                Text("To somewhere")
+            }
+        }
 
         LazyColumn() {
 
@@ -131,6 +185,25 @@ fun Conversation(messages: List<Message>) {
             }
         }
     }
+}
+
+@Composable
+fun OtherScreen(onNavigateBack: () -> Unit,) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column() {
+            MessageCard(Message(
+                "Tathi",
+                "You may be lost...",
+            ),
+            )
+            Button(onClick = {onNavigateBack()}) {
+                Text("Back where you came from")
+            }
+        }
+
+    }
+
+
 }
 
 @Composable
@@ -153,7 +226,7 @@ fun FaceLand() {
 @Composable
 fun PreviewConversation() {
     MCHW1AppTheme {
-            Conversation(
+            NavigationBegin(
                 listOf(
                     Message(
                         "Tathi",
