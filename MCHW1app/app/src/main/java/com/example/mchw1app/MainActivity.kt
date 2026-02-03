@@ -34,27 +34,125 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.serialization.Serializable
-import androidx.navigation.toRoute
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Insert
+import androidx.room.Delete
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.Room
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         //enableEdgeToEdge()
+
         setContent {
             MCHW1AppTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MessageCard(
-                        msg = Message("Tathi", "Lolzista ja trolloloo myös, mutta törkeää ei.")
+                NavigationBegin(
+                    listOf(
+                        Message(
+                            "Tathi",
+                            "Hello! Can anyone seee this?"
+                        ),
+                        Message(
+                            "Tathi",
+                            "If so, I need you to do something for me"
+                        ),
+                        Message(
+                            "Tathi",
+                            """I'm being watched though, so I can't give the instructions immediately"""
+                        ),
+                        Message(
+                            "Tathi",
+                            "Be patient\nPlease\ntap\nthe\nsmiling\nface"
+                        ),
+                        Message(
+                            "Tathi",
+                            """Hey, take a look at Jetpack Compose, it's great!
+            |It's the Android's modern toolkit for building native UI.
+            |It simplifies and accelerates UI development on Android.
+            |Less code, powerful tools, and intuitive Kotlin APIs :)""".trim()
+                        ),
+                        Message(
+                            "Tathi",
+                            "Sorry, you can ignore that. I had to pretend to do some actual work"
+                        ),
+                        Message(
+                            "Tathi",
+                            "Okay, the next message will have important information, make sure no one is watching"
+                        ),
+                        Message(
+                            "Tathi",
+                            "Here goes: Expand the message telling you to be patient."
+                        ),
+                        Message(
+                            "Tathi",
+                            "Did you do it?"
+                        ),
+                        Message(
+                            "Tathi",
+                            "If you did, MWAHAHAHAHHAHAA! You made the smiley sad! You're now evil!"
+                        ),
+                        Message(
+                            "Tathi",
+                            "And don't go tapping the face again"
+                        ),
+                        Message(
+                            "Tathi",
+                            "...You fixed your mistake, didn't you..."
+                        ),
+                        Message(
+                            "Tathi",
+                            "My plan to make the face sad has been spoiled :("
+                        ),
                     )
-
-                }
+                )
             }
 
         }
     }
 }
 
+
+
 data class Message(val author: String, val body: String)
+
+@Entity
+data class User(
+    @PrimaryKey val uid: Int,
+    @ColumnInfo(name = "first_name") val firstName: String?,
+    @ColumnInfo(name = "last_name") val lastName: String?
+)
+
+@Dao
+interface UserDao {
+    @Query("SELECT * FROM user")
+    fun getAll(): List<User>
+
+    @Query("SELECT * FROM user WHERE uid IN (:userIds)")
+    fun loadAllByIds(userIds: IntArray): List<User>
+
+    @Query("SELECT * FROM user WHERE first_name LIKE :first AND " +
+            "last_name LIKE :last LIMIT 1")
+    fun findByName(first: String, last: String): User
+
+    @Insert
+    fun insertAll(vararg users: User)
+
+    @Delete
+    fun delete(user: User)
+}
+
+@Database(entities = [User::class], version = 1)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun userDao(): UserDao
+}
 
 @Composable
 fun MessageCard(msg: Message) {
@@ -129,10 +227,32 @@ object FaceConversation
 @Serializable
 object LostScreen
 
+
+
 @Composable
 fun NavigationBegin(messages: List<Message>) {
 
     val navController = rememberNavController()
+
+
+    val db = Room.databaseBuilder(
+        LocalContext.current,
+        AppDatabase::class.java, "User-Database"
+    ).build()
+
+
+
+    //val userDao = db.userDao()
+    /*
+    userDao.insertAll(
+        User
+            (
+                uid = 123,
+                firstName = "Test",
+                lastName = "McTestface",
+            )
+    )
+    */
 
     NavHost(
         navController = navController,
@@ -156,7 +276,8 @@ fun NavigationBegin(messages: List<Message>) {
                             inclusive = true
                         }
                     }
-                }
+                },
+                //nummer = userDao.getAll().count()
             )
         }
     }
@@ -188,7 +309,10 @@ fun Conversation(messages: List<Message>, onNavigateToSomewhere: () -> Unit,) {
 }
 
 @Composable
-fun OtherScreen(onNavigateBack: () -> Unit,) {
+fun OtherScreen(onNavigateBack: () -> Unit/*, nummer: Int*/) {
+
+
+
     Surface(modifier = Modifier.fillMaxSize()) {
         Column() {
             MessageCard(Message(
@@ -212,7 +336,9 @@ fun FaceLand() {
     var isSmiling by remember { mutableStateOf(true) }
 
     Image(
-        painter = if (isSmiling) painterResource(R.drawable.smile) else painterResource(R.drawable.frown),
+        painter =
+            if (isSmiling) painterResource(R.drawable.smile)
+            else painterResource(R.drawable.frown),
         contentDescription = "Contact profile picture",
         modifier = Modifier
             .size(160.dp) // Set image size to 160 dp
