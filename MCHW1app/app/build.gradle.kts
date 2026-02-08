@@ -46,6 +46,7 @@ android {
 }
 
 dependencies {
+
     val nav_version = "2.9.6"
 
     // Jetpack Compose integration
@@ -70,6 +71,9 @@ dependencies {
 
     ksp("androidx.room:room-compiler:$room_version")
 
+    implementation(libs.coil.kt.coil.compose)
+    //implementation(libs.coil.compose)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -85,4 +89,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
 }
