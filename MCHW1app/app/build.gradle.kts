@@ -71,9 +71,10 @@ dependencies {
 
     ksp("androidx.room:room-compiler:$room_version")
 
-    implementation(libs.coil.kt.coil.compose)
-    //implementation(libs.coil.compose)
+    implementation("androidx.activity:activity:1.12.3")
+    implementation("androidx.fragment:fragment:1.8.9")
 
+    implementation(libs.coil.kt.coil.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

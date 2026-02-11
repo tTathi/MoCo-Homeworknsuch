@@ -1,8 +1,12 @@
 package com.example.mchw1app
 
 //import androidx.compose.material3.Scaffold
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -59,6 +63,17 @@ import com.example.mchw1app.ui.theme.MCHW1AppTheme
 import kotlinx.serialization.Serializable
 import java.io.File
 import java.io.FileOutputStream
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat.getSystemService
+import android.content.Intent
+import android.app.PendingIntent
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ActivityCompat
+//import java.util.jar.Manifest
+import android.content.pm.PackageManager
+import android.Manifest
+import android.os.Debug
+import androidx.activity.result.ActivityResultCallback
 
 
 class MainActivity : ComponentActivity() {
@@ -71,6 +86,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MCHW1AppTheme {
+                createNotificationChannel(LocalContext.current)
                 NavigationBegin()
             }
 
@@ -148,8 +164,6 @@ fun MessageCard(msg: Message, userDao: UserDao) {
                 .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
         )
 
-        Log.d("tedsty", "${userDao.loadByID(msg.authorId).picURI}")
-
         Spacer(modifier = Modifier.width(8.dp))
 
         var isExpanded by remember { mutableStateOf(false) }
@@ -216,6 +230,52 @@ object LostScreen
 
 
 
+private fun createNotificationChannel(theContext: Context) {
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+        val name = "OneChannelToRuleThemAll" //getString(Context.getContentResolver(), "")
+        val descriptionText = "This is THE channel"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel("Channelington", name, importance).apply { description = descriptionText }
+
+        val notificationManager: NotificationManager = getSystemService(theContext,
+            NotificationManager::class.java) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+}
+
+private fun askNotificationPermission() {
+
+    val ARCB: ActivityResultCallback<Int>
+    //registerForActivityResult()
+
+}
+
+private fun sendNotification(theContext: Context, noteID: Int, bob: NotificationCompat.Builder) {
+
+    with(NotificationManagerCompat.from(theContext)) {
+        if (ActivityCompat.checkSelfPermission(
+                theContext,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.d("Permission", "No notification permission")
+            // TODO: Consider calling
+            // ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            // public fun onRequestPermissionsResult(requestCode: Int, permissions: Array&lt;out String&gt;,
+            //                                        grantResults: IntArray)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+
+            return@with
+        }
+        // notificationId is a unique int for each notification that you must define.
+        notify(noteID, bob.build())
+    }
+}
+
 @Composable
 fun NavigationBegin() {
 
@@ -229,6 +289,20 @@ fun NavigationBegin() {
     val userDao = db.userDao()
     val messageDao = db.messageDao()
 
+    val intent = Intent(LocalContext.current, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    val pendingIntent: PendingIntent = PendingIntent.getActivity(LocalContext.current, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+
+    var builder = NotificationCompat.Builder(LocalContext.current, "Channelington")
+        .setSmallIcon(NotificationCompat.BADGE_ICON_SMALL)
+        .setContentTitle("We miss you")
+        .setContentText("Please return. We cannot live without you. We love you dearly")
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+
+    sendNotification(LocalContext.current, 1, builder)
 
     if (userDao.getAll().count() == 0) {
 
