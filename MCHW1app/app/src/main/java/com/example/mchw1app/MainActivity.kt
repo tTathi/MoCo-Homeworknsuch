@@ -1,9 +1,15 @@
 package com.example.mchw1app
 
 //import androidx.compose.material3.Scaffold
+//import java.util.jar.Manifest
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
+//import android.app.RemoteInput
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
@@ -24,14 +30,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.invalidateGroupsWithKey
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,12 +44,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -63,17 +71,9 @@ import com.example.mchw1app.ui.theme.MCHW1AppTheme
 import kotlinx.serialization.Serializable
 import java.io.File
 import java.io.FileOutputStream
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat.getSystemService
-import android.content.Intent
-import android.app.PendingIntent
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.app.ActivityCompat
-//import java.util.jar.Manifest
-import android.content.pm.PackageManager
-import android.Manifest
-import android.os.Debug
-import androidx.activity.result.ActivityResultCallback
+import androidx.core.app.RemoteInput
+import android.hardware.SensorManager
+import android.hardware.Sensor
 
 
 class MainActivity : ComponentActivity() {
@@ -82,11 +82,36 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         //enableEdgeToEdge()
 
-
+        val sense = SensorActivity(this)
+        sense.init()
 
         setContent {
+
             MCHW1AppTheme {
                 createNotificationChannel(LocalContext.current)
+
+                when {
+                    ContextCompat.checkSelfPermission(
+                        LocalContext.current,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED -> {
+                        // You can use the API that requires the permission.
+                    }
+                    ActivityCompat.shouldShowRequestPermissionRationale(
+                        this, Manifest.permission.POST_NOTIFICATIONS) -> {
+                        // In an educational UI, explain to the user why your app requires this
+                        // permission for a specific feature to behave as expected, and what
+                        // features are disabled if it's declined. In this UI, include a
+                        // "cancel" or "no thanks" button that lets the user continue
+                        // using your app without granting the permission.
+                    }
+                    else -> {
+                        // You can directly ask for the permission.
+                        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                            0)
+                    }
+                }
+
                 NavigationBegin()
             }
 
@@ -228,13 +253,11 @@ object FaceConversation
 @Serializable
 object LostScreen
 
-
-
 private fun createNotificationChannel(theContext: Context) {
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-        val name = "OneChannelToRuleThemAll" //getString(Context.getContentResolver(), "")
+        val name = "OneChannelToRuleThemAll"
         val descriptionText = "This is THE channel"
         val importance = NotificationManager.IMPORTANCE_DEFAULT
         val channel = NotificationChannel("Channelington", name, importance).apply { description = descriptionText }
@@ -245,12 +268,6 @@ private fun createNotificationChannel(theContext: Context) {
     }
 }
 
-private fun askNotificationPermission() {
-
-    val ARCB: ActivityResultCallback<Int>
-    //registerForActivityResult()
-
-}
 
 private fun sendNotification(theContext: Context, noteID: Int, bob: NotificationCompat.Builder) {
 
@@ -260,14 +277,6 @@ private fun sendNotification(theContext: Context, noteID: Int, bob: Notification
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.d("Permission", "No notification permission")
-            // TODO: Consider calling
-            // ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            // public fun onRequestPermissionsResult(requestCode: Int, permissions: Array&lt;out String&gt;,
-            //                                        grantResults: IntArray)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
 
             return@with
         }
@@ -275,6 +284,20 @@ private fun sendNotification(theContext: Context, noteID: Int, bob: Notification
         notify(noteID, bob.build())
     }
 }
+val KEY_TEXT_REPLY = "keytextreply"
+private fun getMessageReplyIntent(conversationId: Int): Intent {
+    return Intent()
+        .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+        .setAction("com.example.android.messagingservice.ACTION_MESSAGE_REPLY")
+        .putExtra("converseID", conversationId)
+}
+
+private fun getMessageText(intent: Intent): CharSequence? {
+    return android.app.RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_TEXT_REPLY)
+}
+
+private lateinit var sensorManager: SensorManager
+
 
 @Composable
 fun NavigationBegin() {
@@ -294,13 +317,31 @@ fun NavigationBegin() {
     }
     val pendingIntent: PendingIntent = PendingIntent.getActivity(LocalContext.current, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
+    var remoteInput: RemoteInput = RemoteInput.Builder(KEY_TEXT_REPLY).run {
+        setLabel("Insert reply")
+        build()
+    }
+
+    val replyPendingIntent: PendingIntent =
+        PendingIntent.getBroadcast(LocalContext.current,
+            3,
+            getMessageReplyIntent(3),
+            PendingIntent.FLAG_UPDATE_CURRENT + PendingIntent.FLAG_MUTABLE + PendingIntent.FLAG_ALLOW_UNSAFE_IMPLICIT_INTENT)
+
+    var action: NotificationCompat.Action = NotificationCompat.Action.Builder(
+        R.drawable.ic_launcher_foreground,
+        "Labello",
+        replyPendingIntent
+    ).addRemoteInput(remoteInput).build()
+
     var builder = NotificationCompat.Builder(LocalContext.current, "Channelington")
-        .setSmallIcon(NotificationCompat.BADGE_ICON_SMALL)
+        .setSmallIcon(R.drawable.ic_launcher_foreground) //
         .setContentTitle("We miss you")
         .setContentText("Please return. We cannot live without you. We love you dearly")
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .setContentIntent(pendingIntent)
         .setAutoCancel(true)
+        .addAction(action)
 
     sendNotification(LocalContext.current, 1, builder)
 
@@ -397,6 +438,9 @@ fun NavigationBegin() {
 @Composable
 fun Conversation(onNavigateToSomewhere: () -> Unit, onAddMSG: () -> Unit, userDao: UserDao, messageDao: MessageDao) {
 
+    //val sense = SensorActivity()
+    //sense.stopSensor()
+
     var text by remember { mutableStateOf("") }
 
     Column() {
@@ -466,6 +510,8 @@ fun Conversation(onNavigateToSomewhere: () -> Unit, onAddMSG: () -> Unit, userDa
 @Composable
 fun OtherScreen(onNavigateBack: () -> Unit, onPickIMG: () -> Unit, userDao: UserDao, messageDao: MessageDao) {
 
+
+
     val context = LocalContext.current
 
     val pickMedia = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia()) {
@@ -488,13 +534,30 @@ fun OtherScreen(onNavigateBack: () -> Unit, onPickIMG: () -> Unit, userDao: User
         }
     }
 
+    //sensorManager = getSystemService(LocalContext.current, SensorManager::class.java) as SensorManager
+
+
+    /*
+    val gravSensor = if (sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY) != null) {
+        //Log.d("Sensors", "Found gravity sensor")
+        sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
+    }
+    else {
+        Log.d("Sensors", "No gravity sensor found")
+        null
+    }
+    */
+
+
+    //gravSensor.
+
     Surface(modifier = Modifier.fillMaxSize()) {
         Column() {
             MessageCard(
                 Message(
                     messageDao.getAll().count(),
                     1,
-                    "Hee Hoo!",
+                    content = "Heehoo",
                 ),
                 userDao = userDao
             )

@@ -42,11 +42,17 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
 }
 
 dependencies {
 
+    implementation(libs.material)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
     val nav_version = "2.9.6"
 
     // Jetpack Compose integration
@@ -73,6 +79,8 @@ dependencies {
 
     implementation("androidx.activity:activity:1.12.3")
     implementation("androidx.fragment:fragment:1.8.9")
+
+    implementation("androidx.core:core:1.17.0")
 
     implementation(libs.coil.kt.coil.compose)
     implementation(libs.androidx.core.ktx)
