@@ -82,8 +82,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         //enableEdgeToEdge()
 
-        val sense = SensorActivity(this)
-        sense.init()
+        //val sense = SensorActivity(this)
+        //sense.init()
 
         setContent {
 
@@ -271,6 +271,7 @@ private fun createNotificationChannel(theContext: Context) {
 
 private fun sendNotification(theContext: Context, noteID: Int, bob: NotificationCompat.Builder) {
 
+
     with(NotificationManagerCompat.from(theContext)) {
         if (ActivityCompat.checkSelfPermission(
                 theContext,
@@ -283,6 +284,8 @@ private fun sendNotification(theContext: Context, noteID: Int, bob: Notification
         // notificationId is a unique int for each notification that you must define.
         notify(noteID, bob.build())
     }
+
+
 }
 val KEY_TEXT_REPLY = "keytextreply"
 private fun getMessageReplyIntent(conversationId: Int): Intent {
@@ -312,38 +315,7 @@ fun NavigationBegin() {
     val userDao = db.userDao()
     val messageDao = db.messageDao()
 
-    val intent = Intent(LocalContext.current, MainActivity::class.java).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-    }
-    val pendingIntent: PendingIntent = PendingIntent.getActivity(LocalContext.current, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
-    var remoteInput: RemoteInput = RemoteInput.Builder(KEY_TEXT_REPLY).run {
-        setLabel("Insert reply")
-        build()
-    }
-
-    val replyPendingIntent: PendingIntent =
-        PendingIntent.getBroadcast(LocalContext.current,
-            3,
-            getMessageReplyIntent(3),
-            PendingIntent.FLAG_UPDATE_CURRENT + PendingIntent.FLAG_MUTABLE + PendingIntent.FLAG_ALLOW_UNSAFE_IMPLICIT_INTENT)
-
-    var action: NotificationCompat.Action = NotificationCompat.Action.Builder(
-        R.drawable.ic_launcher_foreground,
-        "Labello",
-        replyPendingIntent
-    ).addRemoteInput(remoteInput).build()
-
-    var builder = NotificationCompat.Builder(LocalContext.current, "Channelington")
-        .setSmallIcon(R.drawable.ic_launcher_foreground) //
-        .setContentTitle("We miss you")
-        .setContentText("Please return. We cannot live without you. We love you dearly")
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-        .setContentIntent(pendingIntent)
-        .setAutoCancel(true)
-        .addAction(action)
-
-    sendNotification(LocalContext.current, 1, builder)
 
     if (userDao.getAll().count() == 0) {
 
@@ -510,8 +482,6 @@ fun Conversation(onNavigateToSomewhere: () -> Unit, onAddMSG: () -> Unit, userDa
 @Composable
 fun OtherScreen(onNavigateBack: () -> Unit, onPickIMG: () -> Unit, userDao: UserDao, messageDao: MessageDao) {
 
-
-
     val context = LocalContext.current
 
     val pickMedia = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia()) {
@@ -533,6 +503,39 @@ fun OtherScreen(onNavigateBack: () -> Unit, onPickIMG: () -> Unit, userDao: User
             Log.d("Photopicker", "No media selected")
         }
     }
+
+    val intent = Intent(LocalContext.current, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    val pendingIntent: PendingIntent = PendingIntent.getActivity(LocalContext.current, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+
+    var remoteInput: RemoteInput = RemoteInput.Builder(KEY_TEXT_REPLY).run {
+        setLabel("Insert reply")
+        build()
+    }
+
+    val replyPendingIntent: PendingIntent =
+        PendingIntent.getBroadcast(LocalContext.current,
+            3,
+            getMessageReplyIntent(3),
+            PendingIntent.FLAG_UPDATE_CURRENT + PendingIntent.FLAG_MUTABLE + PendingIntent.FLAG_ALLOW_UNSAFE_IMPLICIT_INTENT)
+
+    var action: NotificationCompat.Action = NotificationCompat.Action.Builder(
+        R.drawable.ic_launcher_foreground,
+        "Labello",
+        replyPendingIntent
+    ).addRemoteInput(remoteInput).build()
+
+    var builder = NotificationCompat.Builder(LocalContext.current, "Channelington")
+        .setSmallIcon(R.drawable.ic_launcher_foreground) //
+        .setContentTitle("We miss you")
+        .setContentText("Please return. We cannot live without you. We love you dearly")
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+        .addAction(action)
+
+    sendNotification(LocalContext.current, 1, builder)
 
     //sensorManager = getSystemService(LocalContext.current, SensorManager::class.java) as SensorManager
 
